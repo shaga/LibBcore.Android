@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>shaga.LibBcore.LibBcore</id>
+    <version>$version$</version>
+    <title>LibBcore</title>
+    <authors>shaga</authors>
+    <owners>shaga</owners>
+    <licenseUrl>https://github.com/shaga/LibBcore.Android/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/shaga/LibBcore.Android</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Library to use bCore for Xamarin.Android.</description>
+    <releaseNotes>1st release.</releaseNotes>
+    <copyright>Copyright 2016</copyright>
+    <tags>Android bCore BluetoothLE</tags>
+  </metadata>
+  <files>
+    <file src="bin\Release\*.dll" target="lib\MonoAndroid44" />
+  </files>
+</package>
