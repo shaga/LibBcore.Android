@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>shaga.LibBcore.LibBcore</id>
-    <version>$version$</version>
+    <version>0.0.1</version>
     <title>LibBcore</title>
     <authors>shaga</authors>
     <owners>shaga</owners>
