@@ -54,26 +54,53 @@ namespace LibBcore
 
         #region action
 
+        /// <summary>
+        /// Action key for bCore Connection Changed
+        /// </summary>
         public const string ActionKeyConnectionChanged = "LibBcore.BcoreStatusReceiver.ConnectionChanged";
 
+        /// <summary>
+        /// Action key for bCore Service Discovered
+        /// </summary>
         public const string ActionKeyServiceDiscovered = "LibBcore.BcoreStatusReceiver.ServiceDiscovered";
 
+        /// <summary>
+        /// Action key for Read bCore Battery Voltage
+        /// </summary>
         public const string ActionKeyReadBattery = "LibBcore.BcoreStatusReceiver.ReadBattery";
 
+        /// <summary>
+        /// Action key for Read bCore Function info
+        /// </summary>
         public const string ActionKeyReadFunctions = "LibBcore.BcoreStatusReceiver.ReadFunction";
 
         #endregion
 
         #region extra
 
+        /// <summary>
+        /// Extra key for bCore MAC Address
+        /// </summary>
         public const string ExtraKeyAddress = "LibBcore.BcoreStatusReceiver.ExtraAddress";
 
+        /// <summary>
+        /// Extra key for bCore Connection Status
+        /// </summary>
         public const string ExtraKeyConnectionStatus = "LibBcore.BcoreStatusReceiver.ExtraConnectionStatus";
 
+        /// <summary>
+        /// Extra key for bCore Service discovered status
+        /// </summary>
         public const string ExtraKeyIsDiscoveredService = "LibBcore.BcoreStatusReceiver.ExtraIsDiscoveredService";
 
+        /// <summary>
+        /// Extra key for bCore Battery Voltage
+        /// </summary>
         public const string ExtraKeyBatteryVoltage = "LibBcore.BcoreStatusReceiver.ExtraBatteryVoltage";
 
+        /// <summary>
+        /// Extra key for bCore function info
+        /// </summary>
         public const string ExtraKeyFunctions = "LibBcore.BcoreStatusReceiver.ExtraFunction";
 
         #endregion
@@ -82,6 +109,10 @@ namespace LibBcore
 
         #region static
 
+        /// <summary>
+        /// Create IntentFilter for BcoreStatusReceiver
+        /// </summary>
+        /// <returns></returns>
         public static IntentFilter CreateFilter()
         {
             var filter = new IntentFilter();
@@ -97,12 +128,24 @@ namespace LibBcore
 
         #region event
 
+        /// <summary>
+        /// Change bCore connection status event
+        /// </summary>
         public event EventHandler<BcoreConnectionChangedEventArgs> ChangedConnectionStatus;
 
+        /// <summary>
+        /// Discover bCore service event
+        /// </summary>
         public event EventHandler<BcoreDiscoverdServiceEventArgs> DiscoveredService;
 
+        /// <summary>
+        /// Read bCore battery voltage event
+        /// </summary>
         public event EventHandler<BcoreReadBatteryVoltageEventArgs> ReadBattery;
 
+        /// <summary>
+        /// Read bCore function event
+        /// </summary>
         public event EventHandler<BcoreReadFunctionsEventArgs> ReadFunctions;
 
         #endregion

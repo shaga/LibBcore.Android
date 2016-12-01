@@ -19,7 +19,10 @@ namespace LibBcore
     {
         #region inner class
 
-        public class LeScanCallback : Java.Lang.Object, BluetoothAdapter.ILeScanCallback
+        /// <summary>
+        /// Scan callback before KitKat
+        /// </summary>
+        private class LeScanCallback : Java.Lang.Object, BluetoothAdapter.ILeScanCallback
         {
             public event Action<BluetoothDevice> FoundBcore;
 
@@ -28,6 +31,11 @@ namespace LibBcore
                 if (IsDeviceBcore(scanRecord)) FoundBcore?.Invoke(device);
             }
 
+            /// <summary>
+            /// check scan record include bCore Service
+            /// </summary>
+            /// <param name="scanRecord">Advertising packet</param>
+            /// <returns></returns>
             private bool IsDeviceBcore(byte[] scanRecord)
             {
                 if (scanRecord == null) return false;
@@ -45,14 +53,14 @@ namespace LibBcore
 
                         for (var i = 1; i <= 16; i++)
                         {
-                            uuid += scanRecord[pos + i].ToString("x2");
+                            uuid += scanRecord[pos + len - i].ToString("X2");
                             if (i == 4 || i == 6 || i == 8 || i == 10)
                             {
                                 uuid += "-";
                             }
                         }
 
-                        if (string.Compare(uuid, BcoreUuid.BcoreServiceRev.ToString(),
+                        if (string.Compare(uuid, BcoreUuid.BcoreService.ToString(),
                             StringComparison.OrdinalIgnoreCase) == 0) return true;
                     }
 
@@ -63,7 +71,10 @@ namespace LibBcore
             }
         }
 
-        public class ScanCallback : Android.Bluetooth.LE.ScanCallback
+        /// <summary>
+        /// Scan callback after Lollipop
+        /// </summary>
+        private class ScanCallback : Android.Bluetooth.LE.ScanCallback
         {
             public event Action<BluetoothDevice> FoundBcore;
 
@@ -79,6 +90,9 @@ namespace LibBcore
 
         #region property
 
+        /// <summary>
+        /// Scanning bCore
+        /// </summary>
         public bool IsScanning { get; set; }
 
         private static bool IsAfterLollipop => Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop;
@@ -101,6 +115,9 @@ namespace LibBcore
 
         #region events
 
+        /// <summary>
+        /// event for found bCore
+        /// </summary>
         public event EventHandler<BcoreDeviceInfo> FoundBcore;
 
         #endregion
@@ -167,6 +184,9 @@ namespace LibBcore
 
         #region private
 
+        /// <summary>
+        /// Initialize Scanner after Lollipop
+        /// </summary>
         private void InitScanner()
         {
             ScanFilters = new List<ScanFilter>
@@ -180,6 +200,9 @@ namespace LibBcore
             Callback.FoundBcore += OnFoundBcore;
         }
 
+        /// <summary>
+        /// Initialize LeScanner before KitKat
+        /// </summary>
         private void InitLeScanner()
         {
             LeCallback = new LeScanCallback();

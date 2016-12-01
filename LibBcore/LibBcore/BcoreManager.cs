@@ -220,6 +220,7 @@ namespace LibBcore
                 return;
 
             _gatt.Disconnect();
+            _connectionState = EBcoreConnectionState.Disconnecting;
         }
 
         /// <summary>
@@ -314,7 +315,9 @@ namespace LibBcore
 
         private async Task WriteCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value)
         {
-            if (!characteristic.Properties.HasFlag(GattProperty.Write)) return;
+            if (!characteristic.Properties.HasFlag(GattProperty.Write) &&
+                !characteristic.Properties.HasFlag(GattProperty.WriteNoResponse))
+                return;
 
             await Semaphore.WaitAsync();
 
@@ -343,7 +346,7 @@ namespace LibBcore
         {
             var intent = new Intent(BcoreStatusReceiver.ActionKeyConnectionChanged);
 
-            intent.Extras.PutInt(BcoreStatusReceiver.ExtraKeyConnectionStatus, (int) _connectionState);
+            intent.PutExtra(BcoreStatusReceiver.ExtraKeyConnectionStatus, (int) _connectionState);
 
             SendBcoreBroadcast(intent);
         }
@@ -352,7 +355,7 @@ namespace LibBcore
         {
             var intent = new Intent(BcoreStatusReceiver.ActionKeyServiceDiscovered);
 
-            intent.Extras.PutBoolean(BcoreStatusReceiver.ExtraKeyIsDiscoveredService, isDiscovered);
+            intent.PutExtra(BcoreStatusReceiver.ExtraKeyIsDiscoveredService, isDiscovered);
 
             SendBcoreBroadcast(intent);
         }
@@ -361,7 +364,7 @@ namespace LibBcore
         {
             var intent = new Intent(BcoreStatusReceiver.ActionKeyReadBattery);
 
-            intent.Extras.PutInt(BcoreStatusReceiver.ExtraKeyBatteryVoltage, voltage);
+            intent.PutExtra(BcoreStatusReceiver.ExtraKeyBatteryVoltage, voltage);
 
             SendBcoreBroadcast(intent);
         }
@@ -370,7 +373,7 @@ namespace LibBcore
         {
             var intent = new Intent(BcoreStatusReceiver.ActionKeyReadFunctions);
 
-            intent.Extras.PutByteArray(BcoreStatusReceiver.ExtraKeyFunctions, value);
+            intent.PutExtra(BcoreStatusReceiver.ExtraKeyFunctions, value);
 
             SendBcoreBroadcast(intent);
         }
