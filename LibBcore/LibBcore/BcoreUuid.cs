@@ -22,6 +22,7 @@ namespace LibBcore
         public static readonly UUID MotorPwm = UUID.FromString("389CAAF2-843F-4D3B-959D-C954CCE14655");
         public static readonly UUID PortOut = UUID.FromString("389CAAF3-843F-4D3B-959D-C954CCE14655");
         public static readonly UUID ServoPos = UUID.FromString("389CAAF4-843F-4D3B-959D-C954CCE14655");
+        public static readonly UUID BurstCmd = UUID.FromString("389CAAF5-843F-4D3B-959D-C954CCE14655");
         public static readonly UUID GetFunctions = UUID.FromString("389CAAFF-843F-4D3B-959D-C954CCE14655");
     }
 }

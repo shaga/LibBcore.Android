@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>shaga.LibBcore.LibBcore</id>
-    <version>0.0.1</version>
+    <version>1.0.1</version>
     <title>LibBcore</title>
     <authors>shaga</authors>
     <owners>shaga</owners>
@@ -10,8 +10,8 @@
     <projectUrl>https://github.com/shaga/LibBcore.Android</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>Library to use bCore for Xamarin.Android.</description>
-    <releaseNotes>1st release.</releaseNotes>
-    <copyright>Copyright 2016</copyright>
+    <releaseNotes>Add burst command.</releaseNotes>
+    <copyright>Copyright 2016-</copyright>
     <tags>Android bCore BluetoothLE</tags>
   </metadata>
   <files>

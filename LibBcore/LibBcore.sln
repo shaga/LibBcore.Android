@@ -5,6 +5,11 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibBcore", "LibBcore\LibBcore.csproj", "{8AF36411-39F6-4279-825E-AE3D920C3B7B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibBcoreTest", "LibBcoreTest\LibBcoreTest.csproj", "{17E42A1E-DC73-4741-A572-F9F948ABDD36}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8AF36411-39F6-4279-825E-AE3D920C3B7B} = {8AF36411-39F6-4279-825E-AE3D920C3B7B}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +20,12 @@ Global
 		{8AF36411-39F6-4279-825E-AE3D920C3B7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8AF36411-39F6-4279-825E-AE3D920C3B7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8AF36411-39F6-4279-825E-AE3D920C3B7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17E42A1E-DC73-4741-A572-F9F948ABDD36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{17E42A1E-DC73-4741-A572-F9F948ABDD36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{17E42A1E-DC73-4741-A572-F9F948ABDD36}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{17E42A1E-DC73-4741-A572-F9F948ABDD36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17E42A1E-DC73-4741-A572-F9F948ABDD36}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17E42A1E-DC73-4741-A572-F9F948ABDD36}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

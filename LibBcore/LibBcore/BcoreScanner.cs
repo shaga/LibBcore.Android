@@ -22,13 +22,13 @@ namespace LibBcore
         /// <summary>
         /// Scan callback before KitKat
         /// </summary>
-        private class LeScanCallback : Java.Lang.Object, BluetoothAdapter.ILeScanCallback
+        public class LeScanCallback : Java.Lang.Object, BluetoothAdapter.ILeScanCallback
         {
-            public event Action<BluetoothDevice> FoundBcore;
+            public event EventHandler<BluetoothDevice> FoundBcore;
 
             public void OnLeScan(BluetoothDevice device, int rssi, byte[] scanRecord)
             {
-                if (IsDeviceBcore(scanRecord)) FoundBcore?.Invoke(device);
+                if (IsDeviceBcore(scanRecord)) FoundBcore?.Invoke(this, device);
             }
 
             /// <summary>
@@ -74,15 +74,15 @@ namespace LibBcore
         /// <summary>
         /// Scan callback after Lollipop
         /// </summary>
-        private class ScanCallback : Android.Bluetooth.LE.ScanCallback
+        public class ScanCallback : Android.Bluetooth.LE.ScanCallback
         {
-            public event Action<BluetoothDevice> FoundBcore;
+            public event EventHandler<BluetoothDevice> FoundBcore;
 
             public override void OnScanResult(ScanCallbackType callbackType, ScanResult result)
             {
                 base.OnScanResult(callbackType, result);
 
-                FoundBcore?.Invoke(result.Device);
+                FoundBcore?.Invoke(this, result.Device);
             }
         }
 
@@ -209,7 +209,7 @@ namespace LibBcore
             LeCallback.FoundBcore += OnFoundBcore;
         }
 
-        private void OnFoundBcore(BluetoothDevice device)
+        private void OnFoundBcore(object sender, BluetoothDevice device)
         {
             FoundBcore?.Invoke(this, new BcoreDeviceInfo(device.Name, device.Address));
         }

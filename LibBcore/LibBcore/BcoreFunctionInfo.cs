@@ -26,6 +26,8 @@ namespace LibBcore
 
         private readonly byte[] _functionInfo;
 
+        public byte[] FunctionInfo => _functionInfo;
+
         /// <summary>
         /// Enabled motor port count
         /// </summary>
@@ -47,7 +49,7 @@ namespace LibBcore
             EnableServoCount = 0;
             EnablePortOutCount = 0;
 
-            if (functionInfo == null || _functionInfo.Length != FunctionInfoLength) return;
+            if (functionInfo == null || functionInfo.Length != FunctionInfoLength) return;
 
             _functionInfo = functionInfo;
 

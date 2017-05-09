@@ -16,11 +16,18 @@ using Android.Text;
 using Android.Views;
 using Android.Widget;
 using Java.Util;
+using Javax.Crypto.Interfaces;
 
 namespace LibBcore
 {
     public class BcoreManager : BluetoothGattCallback
     {
+        #region const
+
+        private static readonly string TAG = typeof(BcoreManager).Name;
+
+        #endregion
+
         #region field
 
         private readonly string _address;
@@ -43,6 +50,8 @@ namespace LibBcore
 
         private BluetoothGattCharacteristic _portOutCharacteristic;
 
+        private BluetoothGattCharacteristic _burstCmdCharacteristic;
+
         private BluetoothGattCharacteristic _functionCharacteristic;
 
         private byte[] _portOutState = {0};
@@ -51,7 +60,7 @@ namespace LibBcore
 
         #region property
 
-        private static readonly SemaphoreSlim Semaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
         private BluetoothAdapter BluetoothAdapter => _bluetoothManager?.Adapter;
 
@@ -60,6 +69,8 @@ namespace LibBcore
             get { return _portOutState[0]; }
             set { _portOutState[0] = value; }
         }
+
+        public bool IsEnableBurst => _burstCmdCharacteristic != null;
 
         #endregion
 
@@ -78,11 +89,6 @@ namespace LibBcore
             _address = address;
         }
 
-        ~BcoreManager()
-        {
-            Dispose();
-        }
-
         #endregion
 
         #region method
@@ -91,6 +97,7 @@ namespace LibBcore
 
         public override void OnConnectionStateChange(BluetoothGatt gatt, GattStatus status, ProfileState newState)
         {
+            Android.Util.Log.Info(TAG, $"bCore connection changed:{newState}");
             base.OnConnectionStateChange(gatt, status, newState);
 
             if (!IsConnectedDevice(gatt)) return;
@@ -117,17 +124,19 @@ namespace LibBcore
 
         public override void OnServicesDiscovered(BluetoothGatt gatt, GattStatus status)
         {
+            Android.Util.Log.Info(TAG, $"bCore service discovered:{status}");
             base.OnServicesDiscovered(gatt, status);
 
             if (!IsConnectedDevice(gatt)) return;
 
             _service = gatt.GetService(BcoreUuid.BcoreService);
-
+            Android.Util.Log.Debug("bCore Manager", $"char count:{_service.Characteristics.Count}");
             _motorPwmCharacteristic = _service?.GetCharacteristic(BcoreUuid.MotorPwm);
             _servoPosCharacteristic = _service?.GetCharacteristic(BcoreUuid.ServoPos);
             _portOutCharacteristic = _service?.GetCharacteristic(BcoreUuid.PortOut);
             _batteryCharacteristic = _service?.GetCharacteristic(BcoreUuid.BatteryVol);
             _functionCharacteristic = _service?.GetCharacteristic(BcoreUuid.GetFunctions);
+            _burstCmdCharacteristic = _service?.GetCharacteristic(BcoreUuid.BurstCmd);
 
             PortOutState = 0;
 
@@ -137,51 +146,41 @@ namespace LibBcore
         public override void OnCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, GattStatus status)
         {
             base.OnCharacteristicRead(gatt, characteristic, status);
+            Android.Util.Log.Debug("bCore Manager", $"on read characteristic");
 
             if (!IsConnectedDevice(gatt)) return;
 
-            if (characteristic.Uuid == BcoreUuid.GetFunctions)
+            if (characteristic.Uuid.Equals(BcoreUuid.GetFunctions))
             {
                 var value = characteristic.GetValue();
+                Android.Util.Log.Debug("bCore Manager", $"read function:{value}");
 
                 SendBroadcastReadFunctions(value);
             }
-            else if (characteristic.Uuid == BcoreUuid.BatteryVol)
+            else if (characteristic.Uuid.Equals(BcoreUuid.BatteryVol))
             {
                 var value = characteristic.GetBatteryVoltage();
+                Android.Util.Log.Debug("bCore Manager", $"read voltate:{value}");
 
                 SendBroadcastReadBattery(value);
             }
 
-            Semaphore.Release();
+            _semaphore.Release();
         }
 
         public override void OnCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, GattStatus status)
         {
+            Android.Util.Log.Info(TAG, $"bCore write characteristic:{characteristic.Uuid}/{status}");
             base.OnCharacteristicWrite(gatt, characteristic, status);
 
             if (!IsConnectedDevice(gatt)) return;
 
-            Semaphore.Release();
+            _semaphore.Release();
         }
 
         #endregion
 
         #region public
-
-        /// <summary>
-        /// Dispose
-        /// </summary>
-        public new void Dispose()
-        {
-            base.Dispose();
-
-            _gatt?.Close();
-
-            _connectionState = EBcoreConnectionState.Disconnected;
-            
-            _gatt = null;
-        }
 
         /// <summary>
         /// Connect to bCore
@@ -272,11 +271,11 @@ namespace LibBcore
         {
             if (isOn)
             {
-                PortOutState = (byte) (PortOutState & (0x01 << idx));
+                PortOutState = (byte) (PortOutState | (0x01 << idx));
             }
             else
             {
-                PortOutState = (byte) (PortOutState | ~(0x01 << idx));
+                PortOutState = (byte) (PortOutState & ~(0x01 << idx));
             }
 
             await WriteCharacteristic(_portOutCharacteristic, _portOutState);
@@ -294,10 +293,64 @@ namespace LibBcore
         }
 
         /// <summary>
+        /// Write burst command
+        /// </summary>
+        /// <param name="data">data array(mmpsss:7bytes)</param>
+        public async void WriteBurstCommand(byte[] data)
+        {
+            if (!IsEnableBurst) return;
+
+            if (data.Length != 7) return;
+
+            PortOutState = data[6];
+
+            await WriteCharacteristic(_burstCmdCharacteristic, data);
+        }
+
+        /// <summary>
+        /// Write busrt command
+        /// </summary>
+        /// <param name="mtr">motor pwm array[2]</param>
+        /// <param name="svr">servo pwm array[4]</param>
+        /// <param name="portOut">port out status</param>
+        public async void WriteBurstCommand(int[] mtr, int[] svr, byte portOut)
+        {
+            if (!IsEnableBurst) return;
+
+            var value = Bcore.MakeBurstCommandValue(mtr, svr, portOut);
+
+            PortOutState = portOut;
+
+            await WriteCharacteristic(_burstCmdCharacteristic, value);
+        }
+
+        /// <summary>
+        /// Write burst command
+        /// </summary>
+        /// <param name="mtr0">motor ch0 pwm</param>
+        /// <param name="mtr1">motor ch1 pwm</param>
+        /// <param name="svr0">servo ch0 pos</param>
+        /// <param name="svr1">servo ch1 pos</param>
+        /// <param name="svr2">servo ch2 pos</param>
+        /// <param name="svr3">servo ch3 pos</param>
+        /// <param name="portOut">port out status</param>
+        public async void WriteBurstCommand(int mtr0, int mtr1, int svr0, int svr1, int svr2, int svr3, byte portOut)
+        {
+            if (!IsEnableBurst) return;
+
+            var value = Bcore.MakeBurstCommandValue(mtr0, mtr1, svr0, svr1, svr2, svr3, portOut);
+
+            PortOutState = portOut;
+
+            await WriteCharacteristic(_burstCmdCharacteristic, value);
+        }
+
+        /// <summary>
         /// Read battery voltage
         /// </summary>
         public async void ReadBatteryVoltage()
         {
+            Android.Util.Log.Debug("bCore Manager", $"start read battery voltage");
             await ReadCharacteristic(_batteryCharacteristic);
         }
 
@@ -315,11 +368,12 @@ namespace LibBcore
 
         private async Task WriteCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value)
         {
-            if (!characteristic.Properties.HasFlag(GattProperty.Write) &&
-                !characteristic.Properties.HasFlag(GattProperty.WriteNoResponse))
+            if (characteristic == null ||
+                (!characteristic.Properties.HasFlag(GattProperty.Write) &&
+                !characteristic.Properties.HasFlag(GattProperty.WriteNoResponse)))
                 return;
 
-            await Semaphore.WaitAsync();
+            await _semaphore.WaitAsync();
 
             characteristic.SetValue(value);
 
@@ -330,7 +384,7 @@ namespace LibBcore
         {
             if (!characteristic.Properties.HasFlag(GattProperty.Read)) return;
 
-            await Semaphore.WaitAsync();
+            await _semaphore.WaitAsync();
 
             _gatt.ReadCharacteristic(characteristic);
         }
