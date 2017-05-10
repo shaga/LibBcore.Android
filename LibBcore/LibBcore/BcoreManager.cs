@@ -30,11 +30,11 @@ namespace LibBcore
 
         #region field
 
-        private readonly string _address;
+        private string _address;
 
         private readonly Context _context;
 
-        private readonly BluetoothManager _bluetoothManager;
+        private BluetoothManager BluetoothManager => _context?.GetSystemService(Context.BluetoothService) as BluetoothManager;
 
         private BluetoothGatt _gatt;
 
@@ -60,9 +60,7 @@ namespace LibBcore
 
         #region property
 
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-
-        private BluetoothAdapter BluetoothAdapter => _bluetoothManager?.Adapter;
+        private BluetoothAdapter BluetoothAdapter => BluetoothManager?.Adapter;
 
         private byte PortOutState
         {
@@ -71,6 +69,10 @@ namespace LibBcore
         }
 
         public bool IsEnableBurst => _burstCmdCharacteristic != null;
+
+        public bool IsConnected => _connectionState == EBcoreConnectionState.Connected;
+
+        public bool IsConnecting => _connectionState == EBcoreConnectionState.Connecting;
 
         #endregion
 
@@ -81,12 +83,9 @@ namespace LibBcore
         /// </summary>
         /// <param name="context">Context.</param>
         /// <param name="address">Address of bCore to connect.</param>
-        public BcoreManager(Context context, string address)
+        public BcoreManager(Context context)
         {
             _context = context;
-            _bluetoothManager = _context.GetSystemService(Context.BluetoothService) as BluetoothManager;
-
-            _address = address;
         }
 
         #endregion
@@ -116,6 +115,8 @@ namespace LibBcore
                     break;
                 case ProfileState.Disconnected:
                     _connectionState = EBcoreConnectionState.Disconnected;
+                    gatt.Close();
+                    _gatt = null;
                     break;
             }
 
@@ -164,8 +165,6 @@ namespace LibBcore
 
                 SendBroadcastReadBattery(value);
             }
-
-            _semaphore.Release();
         }
 
         public override void OnCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, GattStatus status)
@@ -174,8 +173,6 @@ namespace LibBcore
             base.OnCharacteristicWrite(gatt, characteristic, status);
 
             if (!IsConnectedDevice(gatt)) return;
-
-            _semaphore.Release();
         }
 
         #endregion
@@ -185,21 +182,11 @@ namespace LibBcore
         /// <summary>
         /// Connect to bCore
         /// </summary>
+        /// <param name="address"></param>
         /// <param name="isAuto">auto connect</param>
-        public void Connect(bool isAuto = false)
+        public void Connect(string address, bool isAuto = false)
         {
-            if (_gatt != null)
-            {
-                if (_connectionState == EBcoreConnectionState.Connected || _connectionState == EBcoreConnectionState.Connecting) return;
-
-                if (_gatt.Connect())
-                {
-                    _connectionState = EBcoreConnectionState.Connecting;
-                    return;
-                }
-
-                _gatt.Close();
-            }
+            _address = address;
 
             var device = BluetoothAdapter.GetRemoteDevice(_address);
 
@@ -228,11 +215,11 @@ namespace LibBcore
         /// <param name="idx">Motor index</param>
         /// <param name="pwm">Motor PWM value</param>
         /// <param name="isFlip">true=Flip/false=not Flip</param>
-        public async void WriteMotorPwm(int idx, int pwm, bool isFlip = false)
+        public void WriteMotorPwm(int idx, int pwm, bool isFlip = false)
         {
             var value = Bcore.MakeMotorPwmValue(idx, pwm, isFlip);
 
-            await WriteCharacteristic(_motorPwmCharacteristic, value);
+            WriteCharacteristic(_motorPwmCharacteristic, value);
         }
 
         /// <summary>
@@ -241,11 +228,11 @@ namespace LibBcore
         /// <param name="idx">Servo index</param>
         /// <param name="pos">Servo posision</param>
         /// <param name="isFlip">true=Flip/false=not Flip</param>
-        public async void WriteServoPos(int idx, int pos, bool isFlip = false)
+        public void WriteServoPos(int idx, int pos, bool isFlip = false)
         {
             var value = Bcore.MakeServoPosValue(idx, pos, isFlip);
 
-            await WriteCharacteristic(_servoPosCharacteristic, value);
+            WriteCharacteristic(_servoPosCharacteristic, value);
         }
 
         /// <summary>
@@ -255,11 +242,11 @@ namespace LibBcore
         /// <param name="pos">Servo position</param>
         /// <param name="trim">Servo trim value</param>
         /// <param name="isFlip">true=Flip/false=not Flip</param>
-        public async void WriteServoPos(int idx, int pos, int trim, bool isFlip = false)
+        public void WriteServoPos(int idx, int pos, int trim, bool isFlip = false)
         {
             var value = Bcore.MakeServoPosValue(idx, pos, trim, isFlip);
 
-            await WriteCharacteristic(_servoPosCharacteristic, value);
+            WriteCharacteristic(_servoPosCharacteristic, value);
         }
 
         /// <summary>
@@ -267,7 +254,7 @@ namespace LibBcore
         /// </summary>
         /// <param name="idx">Port out index</param>
         /// <param name="isOn">true=On/false=Off</param>
-        public async void WritePortOut(int idx, bool isOn)
+        public void WritePortOut(int idx, bool isOn)
         {
             if (isOn)
             {
@@ -278,25 +265,25 @@ namespace LibBcore
                 PortOutState = (byte) (PortOutState & ~(0x01 << idx));
             }
 
-            await WriteCharacteristic(_portOutCharacteristic, _portOutState);
+            WriteCharacteristic(_portOutCharacteristic, _portOutState);
         }
 
         /// <summary>
         /// Write port out value
         /// </summary>
         /// <param name="state">Port out value set bit.</param>
-        public async void WritePortOut(byte state)
+        public void WritePortOut(byte state)
         {
             PortOutState = state;
 
-            await WriteCharacteristic(_portOutCharacteristic, _portOutState);
+            WriteCharacteristic(_portOutCharacteristic, _portOutState);
         }
 
         /// <summary>
         /// Write burst command
         /// </summary>
         /// <param name="data">data array(mmpsss:7bytes)</param>
-        public async void WriteBurstCommand(byte[] data)
+        public void WriteBurstCommand(byte[] data)
         {
             if (!IsEnableBurst) return;
 
@@ -304,7 +291,7 @@ namespace LibBcore
 
             PortOutState = data[6];
 
-            await WriteCharacteristic(_burstCmdCharacteristic, data);
+            WriteCharacteristic(_burstCmdCharacteristic, data);
         }
 
         /// <summary>
@@ -313,7 +300,7 @@ namespace LibBcore
         /// <param name="mtr">motor pwm array[2]</param>
         /// <param name="svr">servo pwm array[4]</param>
         /// <param name="portOut">port out status</param>
-        public async void WriteBurstCommand(int[] mtr, int[] svr, byte portOut)
+        public void WriteBurstCommand(int[] mtr, int[] svr, byte portOut)
         {
             if (!IsEnableBurst) return;
 
@@ -321,7 +308,7 @@ namespace LibBcore
 
             PortOutState = portOut;
 
-            await WriteCharacteristic(_burstCmdCharacteristic, value);
+            WriteCharacteristic(_burstCmdCharacteristic, value);
         }
 
         /// <summary>
@@ -334,7 +321,7 @@ namespace LibBcore
         /// <param name="svr2">servo ch2 pos</param>
         /// <param name="svr3">servo ch3 pos</param>
         /// <param name="portOut">port out status</param>
-        public async void WriteBurstCommand(int mtr0, int mtr1, int svr0, int svr1, int svr2, int svr3, byte portOut)
+        public void WriteBurstCommand(int mtr0, int mtr1, int svr0, int svr1, int svr2, int svr3, byte portOut)
         {
             if (!IsEnableBurst) return;
 
@@ -342,49 +329,45 @@ namespace LibBcore
 
             PortOutState = portOut;
 
-            await WriteCharacteristic(_burstCmdCharacteristic, value);
+            WriteCharacteristic(_burstCmdCharacteristic, value);
         }
 
         /// <summary>
         /// Read battery voltage
         /// </summary>
-        public async void ReadBatteryVoltage()
+        public void ReadBatteryVoltage()
         {
             Android.Util.Log.Debug("bCore Manager", $"start read battery voltage");
-            await ReadCharacteristic(_batteryCharacteristic);
+            ReadCharacteristic(_batteryCharacteristic);
         }
 
         /// <summary>
         /// Read funtion infomation
         /// </summary>
-        public async void ReadFunctions()
+        public void ReadFunctions()
         {
-            await ReadCharacteristic(_functionCharacteristic);
+            ReadCharacteristic(_functionCharacteristic);
         }
 
         #endregion
 
         #region private
 
-        private async Task WriteCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value)
+        private void WriteCharacteristic(BluetoothGattCharacteristic characteristic, byte[] value)
         {
             if (characteristic == null ||
                 (!characteristic.Properties.HasFlag(GattProperty.Write) &&
                 !characteristic.Properties.HasFlag(GattProperty.WriteNoResponse)))
                 return;
 
-            await _semaphore.WaitAsync();
-
             characteristic.SetValue(value);
 
             _gatt.WriteCharacteristic(characteristic);
         }
 
-        private async Task ReadCharacteristic(BluetoothGattCharacteristic characteristic)
+        private void ReadCharacteristic(BluetoothGattCharacteristic characteristic)
         {
             if (!characteristic.Properties.HasFlag(GattProperty.Read)) return;
-
-            await _semaphore.WaitAsync();
 
             _gatt.ReadCharacteristic(characteristic);
         }

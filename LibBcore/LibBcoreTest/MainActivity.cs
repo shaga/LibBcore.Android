@@ -83,6 +83,9 @@ namespace LibBcoreTest
             // Set our view from the "main" layout resource
             SetContentView(Resource.Layout.Main);
 
+            _manager?.Dispose();
+            _manager = new BcoreManager(this);
+
             _btnBattery = FindViewById<Button>(Resource.Id.btn_read_battery);
             _editBattery = FindViewById<EditText>(Resource.Id.edit_battery);
             _btnBattery.Click += (sender, args) => _manager?.ReadBatteryVoltage();
@@ -196,9 +199,7 @@ namespace LibBcoreTest
                 {
                     if (_selededInfo == null) return;
 
-                    _manager?.Dispose();
-                    _manager = new BcoreManager(this, _selededInfo.Address);
-                    _manager.Connect();
+                    _manager.Connect(_selededInfo.Address, true);
                     _btnConnect.Enabled = false;
                     _listView.Enabled = false;
                 }
@@ -241,8 +242,8 @@ namespace LibBcoreTest
                         _btnConnect.Enabled = true;
                         break;
                     case EBcoreConnectionState.Disconnected:
-                        _manager?.Dispose();
-                        _manager = null;
+                        //_manager?.Dispose();
+                        //_manager = null;
                         _btnConnect.Enabled = _selededInfo != null;
                         _btnConnect.Text = "Connect";
                         _listView.Enabled = false;
